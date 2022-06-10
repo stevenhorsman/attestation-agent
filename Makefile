@@ -23,8 +23,21 @@ ifeq ($(LIBC), musl)
     ifneq ($(DEBIANOS),)
         MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
     endif
-    LIBC_FLAG := --target x86_64-unknown-linux-musl
-    TARGET_DIR := $(TARGET_DIR)/x86_64-unknown-linux-musl
+# If ARCH set, this will be run below
+    ifndef ARCH
+        TARGET_FLAG := --target $(shell uname -m)-unknown-linux-musl
+        TARGET_DIR := $(TARGET_DIR)/$(shell uname -m)-unknown-linux-musl
+    endif
+endif
+
+# If ARCH specified, we must have LIBC too? and we need to set the target flag
+ifdef ARCH
+    ifndef LIBC
+        $(error If ARCH ($(ARCH)) is specified, then LIBC must be set)
+    endif
+    TARGET_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
+    TARGET_DIR := $(TARGET_DIR)/$(ARCH)-unknown-linux-$(LIBC)
+    RUSTUP_ADD := $(shell rustup target add $(ARCH)-unknown-linux-$(LIBC))
 endif
 
 ifdef DEBUG
@@ -48,7 +61,7 @@ ifeq ($(KBC), eaa_kbc)
 endif
 
 build:
-	cd app && $(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(LIBC_FLAG)
+	cd app && CC=$(CC) $(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(TARGET_FLAG)
 
 TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
 
